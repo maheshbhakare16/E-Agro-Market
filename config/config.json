@@ -1,0 +1,15 @@
+{
+  "params":
+  {
+    "local_server": "True",
+    "local_uri": "mysql+mysqlconnector://root:mahesh12@@localhost/miniproject",
+    "prod_uri":"mysql+mysqlconnector://root:mahesh12@@localhost/miniproject",
+    "head" : "Hey, there ... !",
+    "head1": "well done",
+    "head2":"Alert",
+    "head3":"Sorry...!",
+    "gmail-user": "MailID Here",
+    "gmail-password": "Password Here",
+    "upload_location": "/home/mahesh/PROJECT-PERSONAL/pythonProject/static/product_images/"
+  }
+}

@@ -1,3 +1,4 @@
+import mysql.connector
 from flask import Flask, render_template,request,redirect,flash,session
 import json
 import os
@@ -5,16 +6,20 @@ from werkzeug.utils import secure_filename
 import random
 from flask_mail import Mail
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from flaskwebgui import FlaskUI
 
 
-
+#    ------------------------ OPENED CONFIG.JSON FILE -------------------
+print("Hello outside")
 with open('config/config.json', 'r') as c:
     param=json.load(c)['params']
+    
+    
 app=Flask(__name__)
 ui = FlaskUI(app)
+
 app.config['upload_folder']=param['upload_location']
+
 app.config.update(
 MAIL_SERVER = 'smtp.gmail.com',
     MAIL_PORT = '465',
@@ -26,53 +31,9 @@ mail = Mail(app)
 
 #database server configuration
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-if(param['local_server']):
-    app.config['SQLALCHEMY_DATABASE_URI'] = param['local_uri']
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = param['prod_uri']
-db = SQLAlchemy(app)
+connection = mysql.connector.connect(host='localhost', database='eagromarket',username='mahesh', password='Mahesh#123')
+cursor = connection.cursor(dictionary = True)
 
-
-
-# farmmer_database_signup
-class farmer_signup(db.Model):
-    sr_no=db.Column(db.Integer, unique=True,primary_key=True)
-    fname = db.Column(db.String(80), unique=False, nullable=False)
-    lname = db.Column(db.String(80), unique=False, nullable=False)
-    uname = db.Column(db.String(80), unique=False, nullable=False)
-    address = db.Column(db.String(120), unique=False, nullable=False)
-    email = db.Column(db.String(80), unique=False, nullable=False)
-    dob = db.Column(db.String(80), unique=False, nullable=False)
-    gender = db.Column(db.String(80), unique=False, nullable=False)
-    password = db.Column(db.String(80), unique=False, nullable=False)
-
-
-
-# merchant_database_signup
-class signup(db.Model):
-    sr_no = db.Column(db.Integer, unique=True, primary_key=True)
-    fname = db.Column(db.String(80), unique=False, nullable=False)
-    lname = db.Column(db.String(80), unique=False, nullable=False)
-    uname = db.Column(db.String(80), unique=False, nullable=False)
-    address = db.Column(db.String(120), unique=False, nullable=False)
-    email = db.Column(db.String(80), unique=True, nullable=False)
-    dob = db.Column(db.String(80), unique=False, nullable=False)
-    gender = db.Column(db.String(80), unique=False, nullable=False)
-    password = db.Column(db.String(80), unique=False, nullable=False)
-    gstn = db.Column(db.String(80), unique=False, nullable=False)
-
-# products database
-class product(db.Model):
-    sr_no = db.Column(db.Integer, unique=True, primary_key=True)
-    username= db.Column(db.String(80), unique=False, nullable=False)
-    productname = db.Column(db.String(80), unique=False, nullable=False)
-    quantity = db.Column(db.String(80), unique=False, nullable=False)
-    contact_no= db.Column(db.String(120), unique=False, nullable=False)
-    price = db.Column(db.String(120), unique=False, nullable=False)
-    fullname = db.Column(db.String(120), unique=False, nullable=False)
-    cur_date = db.Column(db.String(120), unique=False, nullable=True)
-    photo = db.Column(db.String(120), unique=False, nullable=True)
 
 # home
 @app.route('/')
@@ -90,15 +51,16 @@ def farmer_login():
     if request.method=='POST':
         username=request.form.get('username')
         password=request.form.get('password')
-        login=signup.query.filter_by(uname=username).first()
         try:
-            if (login.uname == username ):
-                if (login.password == password):
+            query = "select count(uname) as count from farmer_signup where uname = '"+username+"' and password = '"+password+"';"
+            cursor.execute(query)
+            login = cursor.fetchone()            
+            if (login['count'] == 1 ):
                     session['user'] = username
                     return redirect('/farmer_dashboard')
-                else:
-                    flash("wrong password, Please enter proper password", "danger")
-                    return render_template('farmer_login.html', head=param['head2'])
+            else:
+                flash("wrong password, Please enter proper password", "danger")
+                return render_template('farmer_login.html', head=param['head2'])
 
         except:
             flash("user not found please signup", "danger")
@@ -114,9 +76,14 @@ def farmer_login():
 def dashboard_farmer():
     if 'user' in session:
         user_name = session['user']
-        results = product.query.filter_by(username=user_name).all()
-        return render_template('/dashboard.html', results=results, username=user_name)
-
+        try:
+            query = "select * from product;"
+            cursor.execute(query)
+            results = cursor.fetchall()
+            return render_template('dashboard.html', results=results, username=user_name)
+        except:
+            print("Error")
+    return render_template('dashboard.html', results=results, username=user_name)
 
 
 #add new product
@@ -134,9 +101,12 @@ def add_new_product():
             photo=request.form.get('photo')
             f=request.files['photo']
             f.save(os.path.join(app.config['upload_folder'], secure_filename(f.filename)))
-            entry = product(username=username, productname=productname, quantity=quantity, contact_no=contact_no, price=price, fullname=fullname, cur_date=datetime.now(), photo=f.filename)
-            db.session.add(entry)
-            db.session.commit()
+            try:
+                query = "insert into product values(NULL, '"+username+"', '"+productname+"', '"+quantity+"', '"+contact_no+"', '"+price+"', '"+fullname+"', '"+str(datetime.now())+"', '"+f.filename+"');"
+                cursor.execute(query)
+                connection.commit()
+            except Exception as e:
+                print(e)
             return redirect('/farmer_dashboard')
     return render_template('add_new_product.html', u_name=u_name)
 
@@ -144,14 +114,21 @@ def add_new_product():
 def delete(cur_date):
     if 'user' in session:
         u_name=session['user']
-        product1=product.query.filter_by(cur_date=cur_date, username=u_name).first()
-        file=param['upload_location']+product1.photo
-        if os.path.exists(file):
-            os.remove(file)
-        db.session.delete(product1)
-        db.session.commit()
-        return redirect('/farmer_dashboard')
-
+        try:
+            query = "select photo from product where cur_date = '"+cur_date+"' ;"
+            cursor.execute(query)
+            result = cursor.fetchone()
+            file=param['upload_location']+result['photo']
+            if os.path.exists(file):
+                os.remove(file)
+            query = "delete from product where cur_date = '"+cur_date+"' ;"
+            cursor.execute(query)
+            connection.commit()
+            return redirect('/farmer_dashboard')
+        except Exception as e:
+            print(e)
+            return redirect('/farmer_dashboard')
+    
 
 #logout_farmer
 @app.route('/logout')
@@ -180,10 +157,9 @@ def farmer_signup1():
 
         if(password==conf_password):
             try:
-                entry = farmer_signup(fname=fname, lname=lname, uname=uname, address=address, email=email, dob=dob,
-                                      gender=gender, password=password)
-                db.session.add(entry)
-                db.session.commit()
+                query = f"insert into farmer_signup values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
+                cursor.execute(query)
+                connection.commit()
             except:
                 flash("username or Email ID already taken please enter other username", "warning")
                 return render_template('farmer_signup.html', head=param['head'])
@@ -210,15 +186,16 @@ def merchant_login():
     if request.method=='POST':
         username=request.form.get('username')
         password=request.form.get('password')
-        login=signup.query.filter_by(uname=username).first()
         try:
-            if (login.uname == username):
-                if (login.password == password):
+            query = "select count(uname) as count from signup where uname = '"+username+"' and password = '"+password+"';"
+            cursor.execute(query)
+            login = cursor.fetchone()            
+            if (login['count'] == 1 ):
                     session['user_merchant'] = username
                     return redirect('/merchant_dashboard')
-                else:
-                    flash("wrong password, Please enter proper password", "danger")
-                    return render_template('merchant_login.html', head=param['head2'])
+            else:
+                flash("wrong password, Please enter proper password", "danger")
+                return render_template('merchant_login.html', head=param['head2'])
         except:
             flash("user not found please signup", "danger")
             return render_template('merchant_login.html', head=param['head2'])
@@ -234,7 +211,12 @@ def dashboard_merchant():
     user_name = session['user_merchant']
     if request.method=='POST':
         search=request.form.get('search')
-        results = product.query.filter_by(productname=search).all()
+        try:
+            query = f"select * from product where productname = '{search}';"
+            cursor.execute(query);
+            results = cursor.fetchall();
+        except Exception as e:
+            print(e)
         return render_template('dashboard_merchant.html', results=results, username=user_name)
     return render_template('dashboard_merchant.html', username=user_name)
 
@@ -245,8 +227,10 @@ def view_merchant_image(cur_date):
     if 'user_merchant' in session:
         user_name = session['user_merchant']
         try:
-            res=product.query.filter_by(cur_date=cur_date).first()
-            return render_template('image.html', result=res,username=user_name)
+            query = f"select * from product where cur_date = '{cur_date}';"
+            cursor.execute(query);
+            results = cursor.fetchone();
+            return render_template('image.html', result=results,username=user_name)
         except:
             flash("May be product has been deleted...!", "warning")
             return render_template('dashboard_merchant.html', username=user_name,head=param['head3'])
@@ -255,9 +239,16 @@ def view_merchant_image(cur_date):
 def view_farmer_image(cur_date):
     if 'user' in session:
         user_name = session['user']
-        res=product.query.filter_by(cur_date=cur_date).first()
-        return render_template('image_farmer.html', result=res,username=user_name)
-
+        try:
+            query = f"select * from product where cur_date = '{cur_date}';"
+            cursor.execute(query);
+            results = cursor.fetchone()
+            return render_template('image_farmer.html', result=results,username=user_name)
+        except Exception as e:
+            print(e)
+            flash("May be product has been deleted...!", "warning")
+            return redirect('/farmer_dashboard')
+    return render_template('farmer_dashboard.html', result=results,username=user_name)
 
 @app.route('/logout_merchant')
 def logout_merchant():
@@ -285,10 +276,9 @@ def merchant_signup1():
 
         if (password == conf_password):
             try:
-                entry = signup(fname=fname, lname=lname, uname=uname, address=address, email=email, dob=dob,
-                                      gender=gender, password=password, gstn=gstn)
-                db.session.add(entry)
-                db.session.commit()
+                query = f"insert into signup values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}','{gstn}');"
+                cursor.execute(query)
+                connection.commit()
             except:
                 flash("username or Email ID already taken please enter other username", "warning")
                 return render_template('merchant_signup.html',head= param['head'])
@@ -319,7 +309,7 @@ def contact_us():
         subject=request.form.get('subject')
         msg=request.form.get('msg')
         mail.send_message( 'name: ' + name + ' Email ID:' + email +  ' Topic :' + subject,sender=msg,recipients=[param['gmail-user']],body=msg )
-        flash("you have successfully semd the message. We will replay you under 24hrs.",
+        flash("you have successfully send the message. We will replay you under 24hrs.",
               "success")
         return render_template('contact_us.html', head=param['head1'])
 
@@ -331,16 +321,19 @@ def contact_us():
 def forgot_password():
     if request.method=='POST':
         username=request.form.get('username')
-        res = signup.query.filter_by(uname=username).first()
         try:
-            if(res.uname==username):
-                session['username'] = res.uname
+            query = f"select * from signup where uname = '{username}';"
+            cursor.execute(query)
+            res = cursor.fetchone()
+            if(res['uname'] == username):
+                session['username'] = res['uname']
                 otp=random.randrange(100000,999999)
                 session['otp'] = str(otp)
                 msg="your OTP is" + str(otp)
-                mail.send_message('verification otp ....!' ,sender=param['gmail-user'],recipients=[res.email],body=msg)
+                mail.send_message('verification otp ....!' ,sender=param['gmail-user'],recipients=[res['email']],body=msg)
                 return redirect('/otp_verification')
-        except:
+        except Exception as e:
+            print(e)
             flash("username not found.. please create account or Enter proper username...","danger")
             return render_template('forgot_password.html', head=param['head2'])
     return render_template('forgot_password.html')
@@ -369,9 +362,9 @@ def new_password():
         password=request.form.get('password')
         conf_password=request.form.get('conf_password')
         if password==conf_password:
-            update=signup.query.filter_by(uname=session['username']).first()
-            update.password=password
-            db.session.commit()
+            query = f"update signup set password = '{password}' where uname = '{session['uername']}';"
+            cursor.execute(query)
+            cursor.commit()
             flash("New password set Successfully Goto login page to login your account..Thank you","success")
             return render_template('enter_new_password.html', head=param['head1'])
         else:
@@ -389,11 +382,13 @@ def new_password():
 def forgot_username():
     if request.method=='POST':
         email=request.form.get('email')
-        res=signup.query.filter_by(email=email).first()
         try:
-            if res.email==email:
-                msg = "your username of E-AGRO-MARKET login is :   " + str(res.uname)
-                mail.send_message('E-AGRO-MARKET', sender=param['gmail-user'], recipients=[res.email], body=msg)
+            query = f"select uname, email from signup where email = '{email}';"
+            cursor.execute(query)
+            res=cursor.fetchone()
+            if res['email']==email:
+                msg = "your username of E-AGRO-MARKET login is :   " + str(res['uname'])
+                mail.send_message('E-AGRO-MARKET', sender=param['gmail-user'], recipients=[res['email']], body=msg)
                 flash("Username has been send successfully goto check your mailbox and login.... Thank you", "success")
                 return render_template('username_forgot.html', head=param['head1'])
         except:

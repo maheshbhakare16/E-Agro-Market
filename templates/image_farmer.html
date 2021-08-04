@@ -17,7 +17,7 @@
 <br>
 <br>
 <br>
-{% set fname= '/product_images/' + result.photo %}
+{% set fname= '/product_images/' + result['photo'] %}
 <div class="card mx-6" style="width: 50rem;">
   <img src="{{url_for('static',filename=fname)}}" class="card-img-top " alt="...">
   <div class="card-body">

@@ -10,7 +10,6 @@ from flaskwebgui import FlaskUI
 
 
 #    ------------------------ OPENED CONFIG.JSON FILE -------------------
-print("Hello outside")
 with open('config/config.json', 'r') as c:
     param=json.load(c)['params']
     
@@ -160,7 +159,8 @@ def farmer_signup1():
                 query = f"insert into farmer_signup values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
                 cursor.execute(query)
                 connection.commit()
-            except:
+            except Exception as e:
+                print(e)
                 flash("username or Email ID already taken please enter other username", "warning")
                 return render_template('farmer_signup.html', head=param['head'])
             else:

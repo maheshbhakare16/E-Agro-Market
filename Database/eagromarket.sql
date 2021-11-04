@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.25, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.27, for Linux (x86_64)
 --
 -- Host: localhost    Database: eagromarket
 -- ------------------------------------------------------
--- Server version	8.0.25-0ubuntu0.20.04.1
+-- Server version	8.0.27-0ubuntu0.20.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,97 +16,99 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `farmer_signup`
+-- Table structure for table `farmer_lc`
 --
 
-DROP TABLE IF EXISTS `farmer_signup`;
+DROP TABLE IF EXISTS `farmer_lc`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `farmer_signup` (
+CREATE TABLE `farmer_lc` (
   `sr_no` int NOT NULL AUTO_INCREMENT,
-  `fname` varchar(20) DEFAULT NULL,
-  `lname` varchar(20) NOT NULL,
-  `uname` varchar(20) NOT NULL,
-  `address` varchar(80) NOT NULL,
-  `email` varchar(20) NOT NULL,
-  `dob` varchar(20) NOT NULL,
-  `gender` varchar(20) NOT NULL,
-  `password` varchar(20) NOT NULL,
-  PRIMARY KEY (`sr_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `fname` varchar(30) NOT NULL,
+  `lname` varchar(30) DEFAULT NULL,
+  `uname` varchar(60) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `address` varchar(100) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `dob` date NOT NULL,
+  `gender` varchar(10) NOT NULL,
+  `password` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`sr_no`),
+  UNIQUE KEY `uname` (`uname`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `farmer_signup`
+-- Dumping data for table `farmer_lc`
 --
 
-LOCK TABLES `farmer_signup` WRITE;
-/*!40000 ALTER TABLE `farmer_signup` DISABLE KEYS */;
-INSERT INTO `farmer_signup` VALUES (1,'MAHESH','BHAKARE','mahesh16','MAHESHB','MAHESH@GMAIL.COM','2019-11-07','male','1234567890');
-/*!40000 ALTER TABLE `farmer_signup` ENABLE KEYS */;
+LOCK TABLES `farmer_lc` WRITE;
+/*!40000 ALTER TABLE `farmer_lc` DISABLE KEYS */;
+INSERT INTO `farmer_lc` VALUES (4,'Mahesh','Bhakare','mahesh16','Morvis','maheshbhakare95@gmail.com','2019-08-15','male','Mahesh95@');
+/*!40000 ALTER TABLE `farmer_lc` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `product`
+-- Table structure for table `merchant_lc`
 --
 
-DROP TABLE IF EXISTS `product`;
+DROP TABLE IF EXISTS `merchant_lc`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `product` (
-  `sr_no` int NOT NULL AUTO_INCREMENT,
-  `username` varchar(20) NOT NULL,
-  `productname` varchar(30) NOT NULL,
-  `quantity` varchar(20) NOT NULL,
-  `contact_no` varchar(20) NOT NULL,
-  `price` varchar(20) NOT NULL,
-  `fullname` varchar(20) NOT NULL,
-  `cur_date` datetime DEFAULT NULL,
-  `photo` varchar(20) NOT NULL,
-  PRIMARY KEY (`sr_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `merchant_lc` (
+  `sr_no` int NOT NULL,
+  `fname` varchar(30) NOT NULL,
+  `lname` varchar(30) DEFAULT NULL,
+  `uname` varchar(60) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `address` varchar(100) NOT NULL,
+  `email` varchar(50) NOT NULL,
+  `dob` date NOT NULL,
+  `gender` varchar(10) NOT NULL,
+  `gstn` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `password` varchar(30) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`sr_no`),
+  UNIQUE KEY `uname` (`uname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `product`
+-- Dumping data for table `merchant_lc`
 --
 
-LOCK TABLES `product` WRITE;
-/*!40000 ALTER TABLE `product` DISABLE KEYS */;
-INSERT INTO `product` VALUES (2,'mahesh16','onion','12','1234567890','123','mahesh bhakare','2021-07-29 19:40:42','logo.png');
-/*!40000 ALTER TABLE `product` ENABLE KEYS */;
+LOCK TABLES `merchant_lc` WRITE;
+/*!40000 ALTER TABLE `merchant_lc` DISABLE KEYS */;
+/*!40000 ALTER TABLE `merchant_lc` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `signup`
+-- Table structure for table `product_details`
 --
 
-DROP TABLE IF EXISTS `signup`;
+DROP TABLE IF EXISTS `product_details`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `signup` (
-  `sr_no` int NOT NULL AUTO_INCREMENT,
-  `fname` varchar(20) DEFAULT NULL,
-  `lname` varchar(20) NOT NULL,
-  `uname` varchar(20) NOT NULL,
-  `address` varchar(80) NOT NULL,
-  `email` varchar(20) NOT NULL,
-  `dob` varchar(20) NOT NULL,
-  `gender` varchar(20) NOT NULL,
-  `password` varchar(20) NOT NULL,
-  `gstn` varchar(20) NOT NULL,
-  PRIMARY KEY (`sr_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE `product_details` (
+  `sr_no` int NOT NULL,
+  `product_name` varchar(50) NOT NULL,
+  `quantity` int NOT NULL,
+  `contact_no` varchar(10) NOT NULL,
+  `price` float NOT NULL,
+  `full_name` varchar(40) NOT NULL,
+  `upload_date` datetime NOT NULL,
+  `photo` mediumblob NOT NULL,
+  `uname` varchar(60) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`sr_no`),
+  UNIQUE KEY `uname` (`uname`),
+  CONSTRAINT `product_details_ibfk_1` FOREIGN KEY (`uname`) REFERENCES `farmer_lc` (`uname`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `signup`
+-- Dumping data for table `product_details`
 --
 
-LOCK TABLES `signup` WRITE;
-/*!40000 ALTER TABLE `signup` DISABLE KEYS */;
-INSERT INTO `signup` VALUES (1,'MAHESH','BHAKARE','mahesh16','MAHESHB','MAHESH@GMAIL.COM','2019-11-13','male','1234567890','12345678');
-/*!40000 ALTER TABLE `signup` ENABLE KEYS */;
+LOCK TABLES `product_details` WRITE;
+/*!40000 ALTER TABLE `product_details` DISABLE KEYS */;
+/*!40000 ALTER TABLE `product_details` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -118,4 +120,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-07-31 14:44:26
+-- Dump completed on 2021-11-04 10:20:32

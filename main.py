@@ -6,7 +6,6 @@ from werkzeug.utils import secure_filename
 import random
 from flask_mail import Mail
 from datetime import datetime
-from flaskwebgui import FlaskUI
 
 
 #    ------------------------ OPENED CONFIG.JSON FILE -------------------
@@ -15,9 +14,11 @@ with open('config/config.json', 'r') as c:
     
     
 app=Flask(__name__)
-ui = FlaskUI(app)
 
 app.config['upload_folder']=param['upload_location']
+
+
+# ----------------------- mail server configuration ---------------------------------
 
 app.config.update(
 MAIL_SERVER = 'smtp.gmail.com',
@@ -28,9 +29,9 @@ MAIL_SERVER = 'smtp.gmail.com',
 )
 mail = Mail(app)
 
-#database server configuration
+# ------------------------- database server configuration ------------------------------------
 
-connection = mysql.connector.connect(host='localhost', database='eagromarket',username='mahesh', password='Mahesh#123')
+connection = mysql.connector.connect(host='localhost', database='eagromarket',username='mahesh', password='mahesh12@')
 cursor = connection.cursor(dictionary = True)
 
 
@@ -41,8 +42,48 @@ def home():
 
 
 
+# ----------------------------------- farmer_signup ---------------------------------------------
 
-# farmer_login
+
+@app.route('/farmer_signup', methods=['GET', 'POST'])
+def farmer_signup():
+    if(request.method=='POST'):
+        fname=request.form.get('first_name')
+        lname=request.form.get('last_name')
+        uname=request.form.get('username')
+        address=request.form.get('address')
+        email=request.form.get('email')
+        dob=datetime.strptime(request.form.get('DOB'),'%Y-%m-%d').date()
+        gender=request.form.get('gender')
+        password=request.form.get('Password')
+        conf_password = request.form.get('Confirm_Password')
+
+        if(password==conf_password):
+            try:
+                query = f"insert into farmer_lc values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
+                cursor.execute(query)
+                connection.commit()
+            except Exception as e:
+                print(e)
+                flash("username or Email ID already taken please enter other username", "warning")
+                return render_template('farmer_signup.html', head=param['head'])
+            else:
+                flash("You have successfully created account . Please, Go to Login page to Login into your account","success")
+
+                return render_template('farmer_signup.html', head=param['head1'])
+        else:
+            flash("You have entered wrong confirmation password...!", "danger")
+            return render_template('farmer_signup.html', head=param['head2'] )
+
+
+    return render_template('farmer_signup.html')
+
+
+
+# ----------------------- farmer_login ---------------------------------------
+
+
+
 @app.route('/farmer_login', methods=['GET', 'POST'])
 def farmer_login():
     if 'user' in session:
@@ -51,18 +92,18 @@ def farmer_login():
         username=request.form.get('username')
         password=request.form.get('password')
         try:
-            query = "select count(uname) as count from farmer_signup where uname = '"+username+"' and password = '"+password+"';"
+            query = "select count(uname) as count from farmer_lc where uname = '"+username+"' and password = '"+password+"';"
             cursor.execute(query)
             login = cursor.fetchone()            
             if (login['count'] == 1 ):
                     session['user'] = username
                     return redirect('/farmer_dashboard')
             else:
-                flash("wrong password, Please enter proper password", "danger")
+                flash("wrong Username or Password, Please enter proper Detail....!", "danger")
                 return render_template('farmer_login.html', head=param['head2'])
 
         except:
-            flash("user not found please signup", "danger")
+            flash("Something went Wrong..........!\n    Please try again after some time ", "danger")
             return render_template('farmer_login.html', head=param['head2'])
 
     return render_template('farmer_login.html')
@@ -70,26 +111,31 @@ def farmer_login():
 
 
 
-#dashboard_farmer
+# ------------------------- Farmer Dashboard ---------------------------------------
+
+
 @app.route('/farmer_dashboard')
 def dashboard_farmer():
     if 'user' in session:
-        user_name = session['user']
         try:
-            query = "select * from product;"
+            query = "select * from product_details where uname = '"+session['user']+"';"
             cursor.execute(query)
             results = cursor.fetchall()
-            return render_template('dashboard.html', results=results, username=user_name)
-        except:
-            print("Error")
+            return render_template('dashboard.html', results=results, username=session['user'])
+        except Exception as e:
+            print(e)
     return render_template('dashboard.html', results=results, username=user_name)
 
 
-#add new product
+
+# ------------------------ Farmer -add new product- ----------------------------------------
+def convertFiletoBinary(filename):
+    with open(filename, 'rb') as file:
+        return file.read()
+
 @app.route('/farmer_dashboard/add_new_product', methods=['GET','POST'])
 def add_new_product():
     if 'user' in session:
-        u_name=session['user']
         if request.method=='POST':
             username = request.form.get('username')
             productname = request.form.get('productname')
@@ -99,15 +145,21 @@ def add_new_product():
             fullname = request.form.get('fullname')
             photo=request.form.get('photo')
             f=request.files['photo']
-            f.save(os.path.join(app.config['upload_folder'], secure_filename(f.filename)))
+            f_bin = convertFiletoBinary(f.filename)
+            #print(f.filename)
+            #f.save(os.path.join(app.config['upload_folder'], secure_filename(f.filename)))
             try:
-                query = "insert into product values(NULL, '"+username+"', '"+productname+"', '"+quantity+"', '"+contact_no+"', '"+price+"', '"+fullname+"', '"+str(datetime.now())+"', '"+f.filename+"');"
+                query = "insert into product_details values(NULL, '"+username+"', '"+productname+"', "+quantity+", '"+contact_no+"', "+price+", '"+fullname+"', "+datetime.now()+", "+f_bin+");"
                 cursor.execute(query)
                 connection.commit()
             except Exception as e:
                 print(e)
             return redirect('/farmer_dashboard')
-    return render_template('add_new_product.html', u_name=u_name)
+    return render_template('add_new_product.html', u_name=session['user'])
+
+
+
+# ---------------------------------- Delete Product ------------------------------
 
 @app.route('/farmer_dashboard/delete/<string:cur_date>')
 def delete(cur_date):
@@ -127,113 +179,10 @@ def delete(cur_date):
         except Exception as e:
             print(e)
             return redirect('/farmer_dashboard')
-    
-
-#logout_farmer
-@app.route('/logout')
-def logout_farmer():
-    session.pop('user')
-    return redirect('/farmer_login')
 
 
 
-
-#farmer_signup
-@app.route('/farmer_signup', methods=['GET', 'POST'])
-def farmer_signup1():
-    if(request.method=='POST'):
-        fname=request.form.get('first_name')
-        lname=request.form.get('last_name')
-        uname=request.form.get('username')
-        address=request.form.get('address')
-        email=request.form.get('email')
-        dob=request.form.get('DOB')
-        gender=request.form.get('gender')
-        password=request.form.get('Password')
-        conf_password = request.form.get('Confirm_Password')
-        # error_msg = 'please enter proper password'
-
-
-        if(password==conf_password):
-            try:
-                query = f"insert into farmer_signup values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
-                cursor.execute(query)
-                connection.commit()
-            except Exception as e:
-                print(e)
-                flash("username or Email ID already taken please enter other username", "warning")
-                return render_template('farmer_signup.html', head=param['head'])
-            else:
-                flash("you have successfully created account . please, goto login page to login into your account",
-                      "success")
-
-                return render_template('farmer_signup.html', head=param['head1'])
-        else:
-            flash("you have entered wrong confirmation password...!", "danger")
-            return render_template('farmer_signup.html', head=param['head2'] )
-
-
-    return render_template('farmer_signup.html')
-
-
-
-
-# merchant_login
-@app.route('/merchant_login', methods=['GET', 'POST'])
-def merchant_login():
-    if 'user_merchant' in session:
-        return redirect('/merchant_dashboard')
-    if request.method=='POST':
-        username=request.form.get('username')
-        password=request.form.get('password')
-        try:
-            query = "select count(uname) as count from signup where uname = '"+username+"' and password = '"+password+"';"
-            cursor.execute(query)
-            login = cursor.fetchone()            
-            if (login['count'] == 1 ):
-                    session['user_merchant'] = username
-                    return redirect('/merchant_dashboard')
-            else:
-                flash("wrong password, Please enter proper password", "danger")
-                return render_template('merchant_login.html', head=param['head2'])
-        except:
-            flash("user not found please signup", "danger")
-            return render_template('merchant_login.html', head=param['head2'])
-
-    return render_template('merchant_login.html')
-
-
-
-
-#dashboard_merchant
-@app.route('/merchant_dashboard', methods=['GET', 'POST'])
-def dashboard_merchant():
-    user_name = session['user_merchant']
-    if request.method=='POST':
-        search=request.form.get('search')
-        try:
-            query = f"select * from product where productname = '{search}';"
-            cursor.execute(query);
-            results = cursor.fetchall();
-        except Exception as e:
-            print(e)
-        return render_template('dashboard_merchant.html', results=results, username=user_name)
-    return render_template('dashboard_merchant.html', username=user_name)
-
-
-
-@app.route('/merchant_dashboard/view/<string:cur_date>')
-def view_merchant_image(cur_date):
-    if 'user_merchant' in session:
-        user_name = session['user_merchant']
-        try:
-            query = f"select * from product where cur_date = '{cur_date}';"
-            cursor.execute(query);
-            results = cursor.fetchone();
-            return render_template('image.html', result=results,username=user_name)
-        except:
-            flash("May be product has been deleted...!", "warning")
-            return render_template('dashboard_merchant.html', username=user_name,head=param['head3'])
+# -------------------------------- farmer Product Image View --------------------------
 
 @app.route('/farmer_dashboard/view/<string:cur_date>')
 def view_farmer_image(cur_date):
@@ -250,14 +199,24 @@ def view_farmer_image(cur_date):
             return redirect('/farmer_dashboard')
     return render_template('farmer_dashboard.html', result=results,username=user_name)
 
-@app.route('/logout_merchant')
-def logout_merchant():
-    session.pop('user_merchant')
-    return redirect('/merchant_login')
+    
+
+
+# ---------------------------------- Farmer logout ----------------------------------------
+
+
+@app.route('/logout')
+def logout_farmer():
+    session.pop('user')
+    return redirect('/farmer_login')
 
 
 
-#merchant_signup
+
+
+# ---------------------------------------- merchant_signup ----------------------------------------
+
+
 @app.route('/merchant_signup', methods=['GET', 'POST'])
 def merchant_signup1():
 
@@ -294,7 +253,85 @@ def merchant_signup1():
 
 
 
-#about us
+
+# ---------------------------------------------------- merchant_login -----------------------------------
+
+
+@app.route('/merchant_login', methods=['GET', 'POST'])
+def merchant_login():
+    if 'user_merchant' in session:
+        return redirect('/merchant_dashboard')
+    if request.method=='POST':
+        username=request.form.get('username')
+        password=request.form.get('password')
+        try:
+            query = "select count(uname) as count from signup where uname = '"+username+"' and password = '"+password+"';"
+            cursor.execute(query)
+            login = cursor.fetchone()            
+            if (login['count'] == 1 ):
+                    session['user_merchant'] = username
+                    return redirect('/merchant_dashboard')
+            else:
+                flash("wrong password, Please enter proper password", "danger")
+                return render_template('merchant_login.html', head=param['head2'])
+        except:
+            flash("user not found please signup", "danger")
+            return render_template('merchant_login.html', head=param['head2'])
+
+    return render_template('merchant_login.html')
+
+
+
+
+# ------------------------------------ merchant Dashboard -----------------------------------------
+
+
+@app.route('/merchant_dashboard', methods=['GET', 'POST'])
+def dashboard_merchant():
+    user_name = session['user_merchant']
+    if request.method=='POST':
+        search=request.form.get('search')
+        try:
+            query = f"select * from product where productname = '{search}';"
+            cursor.execute(query);
+            results = cursor.fetchall();
+        except Exception as e:
+            print(e)
+        return render_template('dashboard_merchant.html', results=results, username=user_name)
+    return render_template('dashboard_merchant.html', username=user_name)
+
+
+
+# ---------------------------------- Merchant Product image View -----------------------------
+
+
+@app.route('/merchant_dashboard/view/<string:cur_date>')
+def view_merchant_image(cur_date):
+    if 'user_merchant' in session:
+        user_name = session['user_merchant']
+        try:
+            query = f"select * from product where cur_date = '{cur_date}';"
+            cursor.execute(query);
+            results = cursor.fetchone();
+            return render_template('image.html', result=results,username=user_name)
+        except:
+            flash("May be product has been deleted...!", "warning")
+            return render_template('dashboard_merchant.html', username=user_name,head=param['head3'])
+
+# ------------------------------ Merchant LogOut -----------------------------------------
+
+
+@app.route('/logout_merchant')
+def logout_merchant():
+    session.pop('user_merchant')
+    return redirect('/merchant_login')
+
+
+
+
+# ------------------------------------------------ About Us ---------------------------------------------
+
+
 @app.route('/about')
 def about():
     return render_template('about.html')
@@ -316,7 +353,9 @@ def contact_us():
     return render_template('contact_us.html')
 
 
-#forgot_password
+# --------------------------------- forgot_password --------------------------------------------
+
+
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method=='POST':
@@ -338,7 +377,11 @@ def forgot_password():
             return render_template('forgot_password.html', head=param['head2'])
     return render_template('forgot_password.html')
 
-#otp_verify
+
+
+# ------------------------------- otp_verify ------------------------------------------------------
+
+
 @app.route('/otp_verification', methods=['GET','POST'])
 def otp_verification():
     otp=session.get('otp')
@@ -355,7 +398,10 @@ def otp_verification():
     flash("OTP has been send successfully, Check your mailbox and enter otp in below filed...", "success")
     return render_template('otp_verify.html', head=param['head1'])
 
-#new_password
+
+# ------------------------------------------- new_password -------------------------------------------
+
+
 @app.route('/new_password', methods=['GET','POST'])
 def new_password():
     if request.method=='POST':
@@ -377,7 +423,9 @@ def new_password():
 
 
 
-#forgot_username
+# -------------------------------------- forgot_username --------------------------------------------
+
+
 @app.route('/username_forgot', methods=['GET', 'POST'])
 def forgot_username():
     if request.method=='POST':
@@ -396,7 +444,11 @@ def forgot_username():
             return render_template('username_forgot.html', head=param['head2'])
     return render_template('username_forgot.html')
 
-# main_function
+
+
+# ---------------------------------- main_function ---------------------------------------------------
+
+
 if __name__ == '__main__':
     app.secret_key = 'mykey'
     app.run()

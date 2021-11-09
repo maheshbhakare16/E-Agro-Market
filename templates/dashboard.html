@@ -29,12 +29,12 @@
   <tbody>
   {% for result in results %}
     <tr>
-      <th scope="row">{{result.productname}}</th>
+      <th scope="row">{{result.product_name}}</th>
       <td>{{result.quantity}} kg</td>
-      <td>{{result.cur_date}}</td>
+      <td>{{result.upload_date}}</td>
       <td>Rs- {{result.price}} /kg</td>
-      <td><a href="/farmer_dashboard/view/{{result.cur_date}}"><button type="button" class="btn btn-outline-primary ml-5">View Sample Image</button></a></td>
-      <td><a href="/farmer_dashboard/delete/{{result.cur_date}}"><button type="button" class="btn btn-outline-primary ml-5">Delete</button></a></td>
+      <td><a href="/farmer_dashboard/view/{{result.upload_date}}"><button type="button" class="btn btn-outline-primary ml-5">View Sample Image</button></a></td>
+      <td><a href="/farmer_dashboard/delete/{{result.upload_date}}"><button type="button" class="btn btn-outline-primary ml-5">Delete</button></a></td>
 
     </tr>
     {% endfor %}

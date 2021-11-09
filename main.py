@@ -57,10 +57,10 @@ def farmer_signup():
         gender=request.form.get('gender')
         password=request.form.get('Password')
         conf_password = request.form.get('Confirm_Password')
-
+        print(dob)
         if(password==conf_password):
             try:
-                query = f"insert into farmer_lc values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
+                query = f"insert into farmer_lc (fname,lname,uname,address,email,dob,gender,password) values('{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}');"
                 cursor.execute(query)
                 connection.commit()
             except Exception as e:
@@ -114,8 +114,11 @@ def farmer_login():
 # ------------------------- Farmer Dashboard ---------------------------------------
 
 
+
 @app.route('/farmer_dashboard')
 def dashboard_farmer():
+    for f in os.listdir(param['upload_location']):
+        os.remove(os.path.join(param['upload_location'], f))
     if 'user' in session:
         try:
             query = "select * from product_details where uname = '"+session['user']+"';"
@@ -129,9 +132,6 @@ def dashboard_farmer():
 
 
 # ------------------------ Farmer -add new product- ----------------------------------------
-def convertFiletoBinary(filename):
-    with open(filename, 'rb') as file:
-        return file.read()
 
 @app.route('/farmer_dashboard/add_new_product', methods=['GET','POST'])
 def add_new_product():
@@ -143,56 +143,55 @@ def add_new_product():
             contact_no = request.form.get('contact_no')
             price = request.form.get('price')
             fullname = request.form.get('fullname')
-            photo=request.form.get('photo')
-            f=request.files['photo']
-            f_bin = convertFiletoBinary(f.filename)
-            #print(f.filename)
-            #f.save(os.path.join(app.config['upload_folder'], secure_filename(f.filename)))
+            f_bin = request.files['photo'].read()
             try:
-                query = "insert into product_details values(NULL, '"+username+"', '"+productname+"', "+quantity+", '"+contact_no+"', "+price+", '"+fullname+"', "+datetime.now()+", "+f_bin+");"
-                cursor.execute(query)
+                query = "insert into product_details (product_name,quantity,contact_no,price,full_name,upload_date,photo,uname) values(%s,%s,%s,%s,%s,%s,%s,%s);"
+                values=(productname,quantity,contact_no,price,fullname,datetime.now().strftime('%Y-%m-%d %H:%M:%S'),f_bin,username)
+                cursor.execute(query,values)
                 connection.commit()
+                return redirect('/farmer_dashboard')
             except Exception as e:
                 print(e)
-            return redirect('/farmer_dashboard')
     return render_template('add_new_product.html', u_name=session['user'])
 
 
 
 # ---------------------------------- Delete Product ------------------------------
 
-@app.route('/farmer_dashboard/delete/<string:cur_date>')
-def delete(cur_date):
+@app.route('/farmer_dashboard/delete/<string:upload_date>')
+def delete(upload_date):
     if 'user' in session:
         u_name=session['user']
         try:
-            query = "select photo from product where cur_date = '"+cur_date+"' ;"
-            cursor.execute(query)
-            result = cursor.fetchone()
-            file=param['upload_location']+result['photo']
-            if os.path.exists(file):
-                os.remove(file)
-            query = "delete from product where cur_date = '"+cur_date+"' ;"
+            query = "delete from product_details where upload_date = '"+upload_date+"' ;"
             cursor.execute(query)
             connection.commit()
             return redirect('/farmer_dashboard')
         except Exception as e:
             print(e)
-            return redirect('/farmer_dashboard')
 
 
 
 # -------------------------------- farmer Product Image View --------------------------
 
-@app.route('/farmer_dashboard/view/<string:cur_date>')
-def view_farmer_image(cur_date):
+
+def convertBinarytoFile(filename,binary_data):
+    with open(filename, 'wb') as file:
+        return file.write(binary_data)
+
+
+
+@app.route('/farmer_dashboard/view/<string:upload_date>')
+def view_farmer_image(upload_date):
     if 'user' in session:
         user_name = session['user']
         try:
-            query = f"select * from product where cur_date = '{cur_date}';"
-            cursor.execute(query);
+            query = f"select photo from product_details where upload_date = '{upload_date}';"
+            cursor.execute(query)
             results = cursor.fetchone()
-            return render_template('image_farmer.html', result=results,username=user_name)
+            #f_name = param['upload_location']+user_name+'.jpg'
+            file = convertBinarytoFile(param['upload_location']+user_name+'.jpg',results['photo'])
+            return render_template('image_farmer.html', result = user_name+'.jpg',username=user_name)
         except Exception as e:
             print(e)
             flash("May be product has been deleted...!", "warning")
@@ -218,7 +217,7 @@ def logout_farmer():
 
 
 @app.route('/merchant_signup', methods=['GET', 'POST'])
-def merchant_signup1():
+def merchant_signup():
 
 
     if (request.method == 'POST'):
@@ -227,7 +226,7 @@ def merchant_signup1():
         uname = request.form.get('username')
         address = request.form.get('address')
         email = request.form.get('email')
-        dob = request.form.get('DOB')
+        dob=datetime.strptime(request.form.get('DOB'),'%Y-%m-%d').date()
         gender = request.form.get('gender')
         password = request.form.get('Password')
         conf_password = request.form.get('Confirm_Password')
@@ -235,15 +234,15 @@ def merchant_signup1():
 
         if (password == conf_password):
             try:
-                query = f"insert into signup values(NULL,'{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{password}','{gstn}');"
+                query = f"insert into merchant_lc (fname,lname,uname,address,email,dob,gender,gstn,password) values('{fname}','{lname}','{uname}','{address}','{email}','{dob}','{gender}','{gstn}','{password}');"
                 cursor.execute(query)
                 connection.commit()
-            except:
+            except Exception as e:
+                print(e)
                 flash("username or Email ID already taken please enter other username", "warning")
                 return render_template('merchant_signup.html',head= param['head'])
             else:
-                flash("you have successfully created account . please, goto login page to login into your account",
-                      "success")
+                flash("you have successfully created account . please, goto login page to login into your account","success")
                 return render_template('merchant_signup.html', head=param['head1'])
         else:
             flash("you have entered wrong confirmation password...!", "danger")
@@ -265,7 +264,7 @@ def merchant_login():
         username=request.form.get('username')
         password=request.form.get('password')
         try:
-            query = "select count(uname) as count from signup where uname = '"+username+"' and password = '"+password+"';"
+            query = "select count(uname) as count from merchant_lc where uname = '"+username+"' and password = '"+password+"';"
             cursor.execute(query)
             login = cursor.fetchone()            
             if (login['count'] == 1 ):
@@ -288,16 +287,18 @@ def merchant_login():
 
 @app.route('/merchant_dashboard', methods=['GET', 'POST'])
 def dashboard_merchant():
+    for f in os.listdir(param['upload_location']):
+        os.remove(os.path.join(param['upload_location'], f))
     user_name = session['user_merchant']
     if request.method=='POST':
         search=request.form.get('search')
         try:
-            query = f"select * from product where productname = '{search}';"
+            query = f"select * from product_details where product_name = '{search}';"
             cursor.execute(query);
             results = cursor.fetchall();
+            return render_template('dashboard_merchant.html', results=results, username=user_name)
         except Exception as e:
             print(e)
-        return render_template('dashboard_merchant.html', results=results, username=user_name)
     return render_template('dashboard_merchant.html', username=user_name)
 
 
@@ -305,15 +306,16 @@ def dashboard_merchant():
 # ---------------------------------- Merchant Product image View -----------------------------
 
 
-@app.route('/merchant_dashboard/view/<string:cur_date>')
-def view_merchant_image(cur_date):
+@app.route('/merchant_dashboard/view/<string:upload_date>')
+def view_merchant_image(upload_date):
     if 'user_merchant' in session:
         user_name = session['user_merchant']
         try:
-            query = f"select * from product where cur_date = '{cur_date}';"
+            query = f"select photo from product_details where upload_date = '{upload_date}';"
             cursor.execute(query);
             results = cursor.fetchone();
-            return render_template('image.html', result=results,username=user_name)
+            file = convertBinarytoFile(param['upload_location']+user_name+'.jpg',results['photo'])
+            return render_template('image.html', result = user_name+'.jpg',username=user_name)
         except:
             flash("May be product has been deleted...!", "warning")
             return render_template('dashboard_merchant.html', username=user_name,head=param['head3'])

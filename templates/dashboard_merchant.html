@@ -71,13 +71,13 @@
   <tbody>
   {% for result in results %}
     <tr>
-      <th scope="row">{{result.fullname}}</th>
-      <td>{{result.productname}}</td>
-      <td>{{result.cur_date}}</td>
+      <th scope="row">{{result.full_name}}</th>
+      <td>{{result.product_name}}</td>
+      <td>{{result.upload_date}}</td>
       <td>{{result.quantity}} kg</td>
       <td>{{result.contact_no}}</td>
       <td>Rs- {{result.price}} /kg</td>
-      <td><a href="/merchant_dashboard/view/{{result.cur_date}}"><button type="button" class="btn btn-outline-primary ml-5">View Image</button></a></td>
+      <td><a href="/merchant_dashboard/view/{{result.upload_date}}"><button type="button" class="btn btn-outline-primary ml-5">View Image</button></a></td>
 
     </tr>
     {% endfor %}

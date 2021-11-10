@@ -363,14 +363,14 @@ def forgot_password():
     if request.method=='POST':
         username=request.form.get('username')
         try:
-            query = f"select * from signup where uname = '{username}';"
+            query = f"select uname from farmer_lc where uname = '{username}';"
             cursor.execute(query)
             res = cursor.fetchone()
             if(res['uname'] == username):
-                session['username'] = res['uname']
+                session['update_username'] = res['uname']
                 otp=random.randrange(100000,999999)
                 session['otp'] = str(otp)
-                msg="your OTP is" + str(otp)
+                msg="your OTP is: " + str(otp)
                 mail.send_message('verification otp ....!' ,sender=param['gmail-user'],recipients=[res['email']],body=msg)
                 return redirect('/otp_verification')
         except Exception as e:
@@ -387,10 +387,8 @@ def forgot_password():
 @app.route('/otp_verification', methods=['GET','POST'])
 def otp_verification():
     otp=session.get('otp')
-    print(otp)
     if request.method=='POST':
         otp_page=request.form.get('otp')
-        print(otp_page)
         if otp_page==otp:
             return redirect('/new_password')
         else:
@@ -410,7 +408,7 @@ def new_password():
         password=request.form.get('password')
         conf_password=request.form.get('conf_password')
         if password==conf_password:
-            query = f"update signup set password = '{password}' where uname = '{session['uername']}';"
+            query = f"update farmer_lc set password = '{password}' where uname = '{session['update_username']}';"
             cursor.execute(query)
             cursor.commit()
             flash("New password set Successfully Goto login page to login your account..Thank you","success")
